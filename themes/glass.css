@@ -1,0 +1,578 @@
+/* Glass — an Apple-style translucent material for bb.
+ *
+ * bb injects this file into <style id="bb-app-theme">, unlayered, after the app
+ * stylesheet. Every app utility lives in @layer utilities, so an unlayered
+ * rule here wins at equal specificity. That is why the surface rules below can
+ * restyle `.bg-sidebar` / `.bg-background` directly instead of only swapping
+ * custom properties.
+ *
+ * Two invariants keep the theme readable:
+ *   1. --canvas stays OPAQUE. bb derives --border, --surface-recessed-solid,
+ *      --card, --popover and dozens of color-mix() values from it; a
+ *      translucent canvas makes every hairline and solid surface unstable.
+ *   2. Only chrome surfaces (sidebar, main pane, composer, popovers, dialogs)
+ *      receive the material. Content surfaces stay solid and legible.
+ */
+
+/* ------------------------------------------------------------------ */
+/* Material tokens                                                     */
+/* ------------------------------------------------------------------ */
+
+:root,
+.light {
+  --glass-wallpaper-base: #eef1f8;
+  --glass-wallpaper-image:
+    radial-gradient(1200px 820px at 10% -12%, #b7c6ff 0%, rgb(183 198 255 / 0) 62%),
+    radial-gradient(980px 700px at 94% 2%, #a4e4ff 0%, rgb(164 228 255 / 0) 58%),
+    radial-gradient(1100px 900px at 74% 110%, #ffd2e3 0%, rgb(255 210 227 / 0) 62%),
+    radial-gradient(880px 700px at 18% 98%, #ffe4b5 0%, rgb(255 228 181 / 0) 60%);
+
+  --glass-sidebar: rgb(255 255 255 / 52%);
+  --glass-pane: rgb(255 255 255 / 58%);
+  --glass-pane-strong: rgb(255 255 255 / 90%);
+  --glass-popover: rgb(255 255 255 / 80%);
+  --glass-dialog: rgb(255 255 255 / 84%);
+  --glass-solid: #f4f6fb;
+
+  --glass-card: rgb(255 255 255 / 64%);
+  --glass-header: transparent;
+  --glass-chip: rgb(255 255 255 / 88%);
+
+  --glass-blur: blur(26px) saturate(180%);
+  --glass-blur-strong: blur(38px) saturate(200%);
+  --glass-blur-composer: blur(48px) saturate(190%);
+}
+
+.dark {
+  /* The base is mid-dark rather than near-black on purpose. Every chrome
+     surface is translucent, so the base is what shows between and behind them;
+     a #07080d base made those gaps read as black smudges and shadows even
+     though nothing draws a shadow. */
+  --glass-wallpaper-base: #12141c;
+  --glass-wallpaper-image:
+    radial-gradient(1200px 820px at 10% -12%, rgb(70 52 168 / 55%) 0%, rgb(70 52 168 / 0) 60%),
+    radial-gradient(980px 700px at 94% 0%, rgb(16 118 152 / 45%) 0%, rgb(16 118 152 / 0) 58%),
+    radial-gradient(1100px 900px at 76% 110%, rgb(146 40 96 / 45%) 0%, rgb(146 40 96 / 0) 62%),
+    radial-gradient(880px 700px at 16% 100%, rgb(28 66 124 / 45%) 0%, rgb(28 66 124 / 0) 60%),
+    linear-gradient(180deg, #101219 0%, #171a24 55%, #131620 100%);
+
+  --glass-sidebar: rgb(16 19 27 / 56%);
+  --glass-pane: rgb(20 23 32 / 60%);
+  --glass-pane-strong: rgb(34 39 50 / 86%);
+  --glass-popover: rgb(30 34 46 / 86%);
+  --glass-dialog: rgb(30 34 46 / 90%);
+  --glass-solid: #0c0e15;
+
+  --glass-card: rgb(26 30 41 / 62%);
+  --glass-header: transparent;
+  --glass-chip: rgb(58 66 84 / 88%);
+
+  --glass-blur: blur(26px) saturate(160%);
+  --glass-blur-strong: blur(38px) saturate(175%);
+  --glass-blur-composer: blur(48px) saturate(170%);
+}
+
+/* ------------------------------------------------------------------ */
+/* Palette anchors                                                     */
+/* ------------------------------------------------------------------ */
+
+:root,
+.light {
+  /* --canvas is the token plugins paint their own surfaces from, usually as an
+     inline `background: var(--canvas)`. Inline styles beat any class rule, so
+     making --canvas translucent is the only way plugin panels join the theme.
+     Everything the app derives from it (--background, --card, --popover, the
+     color-mix borders) becomes translucent as a side effect, which is what the
+     glass look wants. */
+  --canvas: rgb(255 255 255 / 58%);
+  --ink: #15171d;
+
+  --primary: #0a6bff;
+  --primary-foreground: #ffffff;
+  --timeline-accent: #0a6bff;
+  --file-accent: var(--timeline-accent);
+
+  --muted-foreground: #525869;
+  --subtle-foreground: #5c6374;
+  --readback-foreground: #565c6d;
+
+  --border: rgb(18 21 30 / 14%);
+  --border-hairline: rgb(18 21 30 / 10%);
+  --border-seam: rgb(18 21 30 / 8%);
+  --input: rgb(18 21 30 / 16%);
+  --ring: var(--primary);
+
+  --state-hover: color-mix(in oklab, var(--ink) 7%, transparent);
+  --state-active: color-mix(in oklab, var(--ink) 11%, transparent);
+  --sidebar-accent: color-mix(in oklab, var(--ink) 8%, transparent);
+  --sidebar-border: rgb(18 21 30 / 10%);
+
+  --surface-raised-solid: rgb(255 255 255 / 88%);
+  --surface-recessed-solid: rgb(231 234 243 / 72%);
+  --surface-recessed-soft-solid: #edf0f7;
+  --surface-scrim: rgb(14 17 26 / 32%);
+}
+
+.dark {
+  --canvas: rgb(20 23 32 / 60%);
+  --ink: #cdd1dc;
+
+  --primary: #4da3ff;
+  --primary-foreground: #051019;
+  --timeline-accent: #4da3ff;
+  --file-accent: var(--timeline-accent);
+
+  --muted-foreground: #a9afbf;
+  --subtle-foreground: #9ba4b9;
+  --readback-foreground: #a2a9ba;
+
+  --border: rgb(255 255 255 / 14%);
+  --border-hairline: rgb(255 255 255 / 10%);
+  --border-seam: rgb(255 255 255 / 8%);
+  --input: rgb(255 255 255 / 16%);
+  --ring: var(--primary);
+
+  --state-hover: color-mix(in oklab, var(--ink) 9%, transparent);
+  --state-active: color-mix(in oklab, var(--ink) 14%, transparent);
+  --sidebar-accent: color-mix(in oklab, var(--ink) 10%, transparent);
+  --sidebar-border: rgb(255 255 255 / 10%);
+
+  --surface-raised-solid: rgb(30 35 46 / 88%);
+  --surface-recessed-solid: rgb(21 24 31 / 72%);
+  --surface-recessed-soft-solid: #12151c;
+  --surface-scrim: rgb(0 0 0 / 52%);
+}
+
+/* bb's stock shadows are hard 2px offsets. Soft ambient shadows read as
+   glass; the hard ones read as paper. */
+:root,
+.light,
+.dark {
+  /* Every Tailwind shadow utility reads one of these tokens, so zeroing them
+     here removes elevation app-wide in one place. `shadow-lift` in particular
+     is what the desktop composer dock uses to throw a shadow up into the
+     conversation. */
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+  --shadow-lift: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Wallpaper                                                           */
+/* ------------------------------------------------------------------ */
+
+body.bb-app-shell {
+  background-color: var(--glass-wallpaper-base);
+  background-image: var(--glass-wallpaper-image);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* ------------------------------------------------------------------ */
+/* Sidebar                                                             */
+/* ------------------------------------------------------------------ */
+
+/* Painted once on the outermost sidebar surface; inner wrappers reuse the
+   same utility and would otherwise stack a second sheet of material. */
+/* `[class~=...]` rather than `div.bg-sidebar`: the right panel is an <aside>
+   with the same utility, so an element-specific selector silently skipped it
+   and that panel stayed opaque and unfiltered. */
+[class~="bg-sidebar"] {
+  background-color: var(--glass-sidebar);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border-width: 0;
+  box-shadow: none;
+}
+
+/* The framed desktop root also carries `bg-sidebar`, but it is the window
+   layer, not a sidebar: it is made transparent below. If it counted as the
+   outer surface here, every real sidebar region inside it — the app sidebar,
+   the right panel, split editor panes — would be made transparent too, and the
+   window would lose those surfaces entirely. Excluding `[data-framed]` from
+   the outer role makes the nesting rule resolve exactly as it does on the web,
+   where the outermost real sidebar element is the one that paints. */
+[class~="bg-sidebar"]:not([data-framed]) [class~="bg-sidebar"] {
+  background-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Main pane and full-page routes                                      */
+/* ------------------------------------------------------------------ */
+
+/* Token selectors, not element selectors. These utilities land on `main`,
+   `form`, `section`, `aside`, `button` and `span` in different places, so a
+   `div.` prefix silently skipped whole panels — the right panel is an
+   `<aside>` and stayed opaque and unfiltered until this was noticed. */
+[class~="bg-background"] {
+  background-color: var(--glass-pane);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* Nested surfaces inherit the material painted by the one above them. Painting
+   them again would also cancel the backdrop-filter of any glass child, such as
+   the composer. */
+[class~="bg-background"] [class~="bg-background"] {
+  background-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Raised or recessed bands (the composer dock) and floating cards carry their
+   own tint but no filter, which reads as flat paint next to frosted chrome. */
+[class~="bg-surface-raised-solid"],
+[class~="bg-surface-recessed-solid"] {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* Floating buttons over content (scroll to bottom, and similar) sit on
+   `bg-background`; without the filter they read as a flat chip. */
+button[class~="bg-background"] {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* ------------------------------------------------------------------ */
+/* Chrome bands: header and composer                                   */
+/* ------------------------------------------------------------------ */
+
+/* The thread header is fully transparent: it sits inside the pane that already
+   paints the material, and the thread scroller starts exactly at its bottom
+   edge (measured: header 0-48, scroller 48-...), so nothing ever passes behind
+   it. Any tint here would only draw a band across the top of the pane, which is
+   the seam this removes.
+
+   The rule stays so the band keeps killing the app's own hairline and shadow;
+   the colour is the tunable `--glass-header` token, currently transparent. */
+header[class*="bg-surface-scrim"] {
+  background-color: var(--glass-header);
+  border-bottom-width: 0;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Desktop framed window                                               */
+/* ------------------------------------------------------------------ */
+
+/* In the desktop app the content column is a card: `::before` carries
+   `border-y border-r border-l` plus an opaque `bg-background` fill, and
+   `::after` draws a hairline in the title bar.
+
+   The drawn edges are removed here. The surfaces then have to resolve to the
+   same stack the browser build produces, which is not what the app's own frame
+   does: the frame root carries `bg-sidebar` plus a
+   `linear-gradient(var(--surface-recessed), ...)` overlay, and the content
+   pane inside it ships **without** the `bg-background` token. Left alone, the
+   panes paint nothing, the frame's sidebar tint shows through the whole window,
+   and every `bg-background` descendant that the browser build makes transparent
+   (the composer dock, the scroll pill) paints its own pane sheet and blur on
+   top.
+
+   Two earlier attempts are recorded so they are not repeated:
+
+   - Painting the card's `::before` with the pane tint made it cover a
+     sub-rectangle, and the strip above the title-bar offset showed raw
+     wallpaper.
+   - Painting the whole frame with the pane tint and leaving the pane
+     transparent stacked a second sheet under every nested surface (sidebar,
+     right panel, cards, composer dock) — those panels came out visibly lighter
+     than in the browser build. The frame's own gradient overlay was still
+     painting on top of the tint as well.
+
+   The model that works keeps the browser build's stack: the panes paint their
+   own material, and the frame only paints the title-bar strip that no pane
+   covers. */
+[class*="before:border-border"]::before {
+  border-width: 0;
+  background-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[class*="after:bg-border"]::after {
+  background-color: transparent;
+}
+
+/* The card also insets its content by 1px (`px-px pb-px`) to leave room for the
+   border it no longer draws. With the lip and radius at zero that inset is the
+   last difference in geometry: it makes the desktop pane 2px narrower and 1px
+   shorter than the browser pane, which shifts the composer and its dock. */
+[class*="before:border-border"] {
+  padding: 0;
+}
+
+/* The lip and the corner radius are declared inline by the app, so `!important`
+   is what wins. Zeroing them makes the app fill its window.
+
+   The frame is also `bg-sidebar` with a `--surface-recessed` gradient painted
+   by the app; both are cleared. Only the title-bar strip is filled, because it
+   is the one band no pane covers: the card is pulled up by the title-bar
+   height, so its `::before` starts below it. No filter here — the strip has
+   nothing behind it but the wallpaper, and a filter would turn the frame into
+   a backdrop root for every pane inside it. */
+[data-framed] {
+  --bb-frame-window-lip: 0px !important;
+  --bb-frame-card-radius: 0px !important;
+  background-color: transparent;
+  background-image: linear-gradient(var(--glass-pane), var(--glass-pane));
+  background-repeat: no-repeat;
+  background-position: top;
+  background-size: 100% var(--bb-window-title-bar-height, 0px);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* The framed content pane is the browser build's `main.bg-background`: the
+   desktop build drops that token and expects the frame to paint, which is what
+   made the composer dock paint a second sheet. Painting the pane here restores
+   the web stack for every child — cards, the composer dock, the scroll pill. */
+[data-framed] > main {
+  background-color: var(--glass-pane);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* Inside that pane, `bg-background` descendants go transparent exactly as they
+   do under the web pane's token. Without this structural scope the composer
+   dock (`.chat-prompt-box`'s parent) keeps its own pane tint and a second
+   `blur(26px)` pass, so the prompt band reads denser than the web build. The
+   composer form itself is unaffected: `form[...]` below is later and equally
+   specific, so it keeps `--glass-pane-strong` and the composer blur. */
+[data-framed] > main [class~="bg-background"] {
+  background-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* The framed sidebar is its own card and keeps a 1px border on its top, left
+   and bottom edges. Those are the last drawn lines in the window. */
+[data-framed] [class*="border-y border-l border-border"] {
+  border-width: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Plugin surfaces                                                     */
+/* ------------------------------------------------------------------ */
+
+/* Plugins build their own chrome from `var(--canvas)` and paint it inline, so
+   no class selector reaches it. With --canvas translucent those surfaces are
+   already tinted; they only lack the filter, which is what turns a tinted
+   sheet into frosted glass. Scoping on the inline declaration keeps this off
+   elements that merely reference the token for a border colour. */
+[style*="background: var(--canvas)"],
+[style*="background-color: var(--canvas)"] {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* ------------------------------------------------------------------ */
+/* Scroll overflow fades                                               */
+/* ------------------------------------------------------------------ */
+
+/* bb marks a scrollable region's overflow with a 24px gradient that fades to
+   the surface colour (`data-overflow-fade`, tones `background` / `sidebar` /
+   `surface-raised`). That gradient is opaque at one end, so on a translucent
+   glass surface its edge never matches the surface it sits on — the mismatch
+   reads as a soft dark band, which is the "shadow" that survives every other
+   fix. Removing the gradient leaves the element in place, so scroll state and
+   hit testing are untouched. */
+[data-overflow-fade] {
+  background-image: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Split panes                                                         */
+/* ------------------------------------------------------------------ */
+
+/* Dragging a divider is a 1px line plus an invisible 12px hit target. The line
+   is `bg-border` / `bg-border-seam` on a `w-px` (or `h-px`) element; the hit
+   target is transparent and carries the same cursor class, so the cursor
+   selectors alone would be too broad. Matching the width unit as well keeps
+   the resize behaviour and drops only the drawn line. */
+[class*="cursor-col-resize"][class*="w-px"],
+[class*="cursor-row-resize"][class*="h-px"] {
+  background-color: transparent;
+}
+
+/* The thread-detail divider (thread | right panel) draws its seam a second
+   time: beside the cleared handle sits a line span
+   (`pointer-events-none absolute inset-y-0 left-full z-10 w-px`, painted
+   `bg-border` / `bg-border-seam`, brightening to `accent-foreground` on hover
+   and drag) that carries no cursor class, so the rule above misses it.
+   `left-full` pins it to the handle's right edge and appears only here in the
+   bundle, so matching it together with `w-px` clears exactly this line. */
+[class*="left-full"][class*="w-px"] {
+  background-color: transparent;
+}
+
+/* The editor and tool panels draw the same divider as a left border, so a
+   dropped splitter would still leave a line behind. Only panels are matched:
+   `bg-sidebar` narrows it to the panel containers, which keeps the markdown
+   blockquote (`border-l border-border-seam pl-3`) intact — that one is
+   content, not chrome. */
+[class*="bg-sidebar"][class*="border-l border-border"],
+[class*="bg-sidebar"][class*="border-l border-border-seam"] {
+  border-left-width: 0;
+}
+
+/* The chat column closes with `border-r border-border` on its own container, so
+   the splitter between chat and editor is really a border here. `~=` matches a
+   whole class token, so this cannot catch `border-ring` or a `--border` custom
+   property, and `border-border` keeps it away from `border-seam`, which the
+   markdown blockquote uses. */
+[class~="border-r"][class~="border-border"] {
+  border-right-width: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Composer                                                            */
+/* ------------------------------------------------------------------ */
+
+form[class*="bg-background"][class*="rounded-xl"] {
+  background-color: var(--glass-pane-strong);
+  -webkit-backdrop-filter: var(--glass-blur-composer);
+  backdrop-filter: var(--glass-blur-composer);
+  border-width: 0;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Disclosure pills                                                    */
+/* ------------------------------------------------------------------ */
+
+/* The branch summary above the composer ("Committed - 109 files"), the
+   "Merge base" picker, and the composer's attachment chips are all
+   `bg-background/70` buttons that draw `shadow-xs` plus a 1px `ring`. Both are
+   edges, so the theme clears them: the pill is defined by tint alone. */
+[class*="bg-background/70"] {
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-ring-offset-shadow: 0 0 #0000;
+  box-shadow: none;
+  background-color: var(--glass-chip);
+  border-color: transparent;
+}
+
+/* ------------------------------------------------------------------ */
+/* Cards                                                               */
+/* ------------------------------------------------------------------ */
+
+/* No backdrop-filter here: cards sit inside an already-blurred pane, and a
+   second filter pass per card is the expensive case on scroll. A tinted sheet
+   reads as the same material. */
+.bg-card {
+  background-color: var(--glass-card);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Popovers, menus, dialogs, drawers                                   */
+/* ------------------------------------------------------------------ */
+
+/* These must outrank the generic `div.bg-background` pane rule above, which
+   would otherwise paint dialogs and popovers with pane material. */
+[class~="bg-popover"] {
+  background-color: var(--glass-popover);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  border-width: 0;
+  box-shadow: none;
+}
+
+[role="dialog"] {
+  background-color: var(--glass-dialog);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  border-width: 0;
+  box-shadow: none;
+}
+
+[data-vaul-drawer] {
+  background-color: var(--glass-dialog);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  border-width: 0;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Graceful degradation                                                */
+/* ------------------------------------------------------------------ */
+
+/* Solid fallback: same palette, no material. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  body.bb-app-shell {
+    background-image: none;
+    background-color: var(--glass-solid);
+  }
+
+  [class~="bg-sidebar"],
+  main.bg-background,
+  div.bg-background,
+  form[class*="bg-background"][class*="rounded-xl"],
+  .bg-popover,
+  [role="dialog"],
+  [data-vaul-drawer] {
+    background-color: var(--glass-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* The framed desktop paints pane material on the pane and the title-bar
+     strip itself, so both have to follow the solid fallback too. */
+  [data-framed] {
+    background-image: linear-gradient(var(--glass-solid), var(--glass-solid));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  [data-framed] > main {
+    background-color: var(--glass-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body.bb-app-shell {
+    background-image: none;
+    background-color: var(--glass-solid);
+  }
+
+  [class~="bg-sidebar"],
+  main.bg-background,
+  div.bg-background,
+  form[class*="bg-background"][class*="rounded-xl"],
+  .bg-popover,
+  [role="dialog"],
+  [data-vaul-drawer] {
+    background-color: var(--glass-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* The framed desktop paints pane material on the pane and the title-bar
+     strip itself, so both have to follow the solid fallback too. */
+  [data-framed] {
+    background-image: linear-gradient(var(--glass-solid), var(--glass-solid));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  [data-framed] > main {
+    background-color: var(--glass-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

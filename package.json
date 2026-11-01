@@ -1,0 +1,42 @@
+{
+  "name": "bb-plugin-theme-glass",
+  "version": "0.1.0",
+  "description": "Apple-style translucent glass theme for bb.",
+  "type": "module",
+  "private": true,
+  "keywords": [
+    "bb-plugin",
+    "theme",
+    "glass",
+    "translucent"
+  ],
+  "license": "MIT",
+  "bb": {
+    "name": "Theme Glass",
+    "description": "An Apple-style translucent glass palette: blurred chrome over a soft mesh wallpaper, for light and dark mode.",
+    "branding": {
+      "icon": "Layers"
+    },
+    "server": "./server.ts",
+    "skills": [
+      "skills"
+    ],
+    "themes": [
+      {
+        "id": "glass",
+        "name": "Glass",
+        "description": "Translucent glass chrome over a soft mesh wallpaper",
+        "css": "./themes/glass.css"
+      }
+    ]
+  },
+  "engines": {
+    "bb": ">=0.47",
+    "bbPluginSdk": ">=0.6.79"
+  },
+  "devDependencies": {
+    "@get-bb/plugin-sdk": "0.6.79",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
