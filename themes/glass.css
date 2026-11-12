@@ -371,6 +371,15 @@ header[class*="bg-surface-scrim"] {
   border-width: 0;
 }
 
+/* Desktop also overlays the framed inset with a separate
+   `[data-sidebar="inset-edge"]` span carrying `border border-border`.
+   The rule above only covers the inset's `border-y border-l` card, so this
+   overlay remained as the visible macOS frame line. It is desktop-scoped and
+   cannot affect content borders or the web layout. */
+[data-framed] [data-sidebar="inset-edge"] {
+  border-width: 0;
+}
+
 /* ------------------------------------------------------------------ */
 /* Plugin surfaces                                                     */
 /* ------------------------------------------------------------------ */
