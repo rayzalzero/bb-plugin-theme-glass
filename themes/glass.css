@@ -205,6 +205,16 @@ body.bb-app-shell {
   box-shadow: none;
 }
 
+/* The primary sidebar panel gets its divider from a compound utility:
+   `border-border-seam group-data-[side=left]:border-r`. It is not a
+   `border-border` token, so the generic split-pane rule below cannot see it;
+   when sidebar visibility changes, that utility is re-mounted and the seam
+   becomes visible again. The data attribute belongs to bb's sidebar primitive,
+   so clearing it does not touch content borders or plugin chrome. */
+[data-sidebar="panel"] {
+  border-right-width: 0;
+}
+
 /* ------------------------------------------------------------------ */
 /* Main pane and full-page routes                                      */
 /* ------------------------------------------------------------------ */
@@ -358,6 +368,15 @@ header[class*="bg-surface-scrim"] {
 /* The framed sidebar is its own card and keeps a 1px border on its top, left
    and bottom edges. Those are the last drawn lines in the window. */
 [data-framed] [class*="border-y border-l border-border"] {
+  border-width: 0;
+}
+
+/* Desktop also overlays the framed inset with a separate
+   `[data-sidebar="inset-edge"]` span carrying `border border-border`.
+   The rule above only covers the inset's `border-y border-l` card, so this
+   overlay remained as the visible macOS frame line. It is desktop-scoped and
+   cannot affect content borders or the web layout. */
+[data-framed] [data-sidebar="inset-edge"] {
   border-width: 0;
 }
 
